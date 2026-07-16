@@ -1,0 +1,132 @@
+cd smart-stadium-ops
+git remote add origin https://github.com/YOUR_USERNAME/smart-stadium-ops.git
+git branch -M main
+git push -u origin main# 🏟️ Smart Stadium & Tournament Ops
+
+A full-stack platform for running live sports tournaments: schedule matches, push
+live scores to fans in real time, manage venues and teams, and let fans/staff ask
+an AI assistant anything about the tournament instead of hunting through menus.
+
+Built for **Challenge 4: Smart Stadiums & Tournament Operations**.
+
+## Why this exists
+
+Tournament organizers juggle three things badly with spreadsheets and group chats:
+*schedules that change last-minute*, *live scores that get stale*, and *fans who
+can't find basic answers* ("what time is the semifinal?", "where's Gate C?").
+This app fixes all three in one place, backed by a real database and a real login
+system — not a mockup.
+
+## What's inside
+
+| Piece | Tech |
+|---|---|
+| Backend API | Node.js, Express, SQLite (better-sqlite3), JWT auth, bcrypt |
+| Frontend | React 18 + Vite, React Router, custom CSS (no UI kit) |
+| AI Chatbot | Anthropic Claude API, grounded in live tournament/match data pulled from the database |
+| Auth | Email/password, roles: `admin` (organizer/staff) and `fan` |
+| Tests | Jest + Supertest (backend API tests) |
+
+## Core features
+
+- **Tournaments & Matches** — create tournaments, schedule matches with teams,
+  venue, and kickoff time.
+- **Live scoreboard** — admins update scores/status (`scheduled → live → completed`)
+  in real time; every visitor sees a live-updating LED-style ticker.
+- **Role-based access** — only admins/staff can create or edit; fans get
+  read-only + chatbot access.
+- **AI assistant ("Ask the Stadium")** — a floating chat widget that answers
+  questions about the current schedule, live scores, and venues. The backend
+  injects the *actual current database state* into the system prompt before
+  calling Claude, so answers are grounded in real data, not hallucinated.
+- **Admin dashboard** — one screen to manage tournaments, matches, and live scores.
+
+## Project structure
+
+```
+smart-stadium-ops/
+├── backend/          Express API + SQLite database
+│   └── src/
+│       ├── routes/        auth, tournaments, matches, chat
+│       ├── models/        db access helpers
+│       ├── middleware/     JWT auth guard
+│       └── __tests__/      Jest + Supertest tests
+└── frontend/         React + Vite single-page app
+    └── src/
+        ├── pages/          Login, Register, Dashboard, Admin
+        ├── components/     ScoreTicker, MatchCard, ChatWidget, etc.
+        ├── context/        AuthContext
+        └── api/            fetch wrappers
+```
+
+## Running locally
+
+### 1. Backend
+
+```bash
+cd backend
+cp .env.example .env      # then fill in ANTHROPIC_API_KEY and JWT_SECRET
+npm install
+npm run seed               # creates SQLite DB + demo admin/tournament/matches
+npm run dev                 # http://localhost:4000
+```
+
+Demo admin login after seeding: `admin@stadium.dev` / `admin1234`
+
+### 2. Frontend
+
+```bash
+cd frontend
+cp .env.example .env       # points at the backend URL
+npm install
+npm run dev                 # http://localhost:5173
+```
+
+### 3. Tests
+
+```bash
+cd backend
+npm test
+```
+
+## Deployment
+
+- **Backend**: deploy `backend/` to Render/Railway/Fly.io as a Node web service.
+  Set `ANTHROPIC_API_KEY`, `JWT_SECRET`, and `PORT` env vars. SQLite file persists
+  on disk (use a persistent volume) or swap `DB_PATH` to a mounted disk.
+- **Frontend**: deploy `frontend/` to Vercel/Netlify as a static Vite build
+  (`npm run build`). Set `VITE_API_URL` to your deployed backend URL.
+
+## Environment variables
+
+**backend/.env**
+```
+PORT=4000
+JWT_SECRET=replace-with-a-long-random-string
+ANTHROPIC_API_KEY=sk-ant-...
+DB_PATH=./data/stadium.db
+```
+
+**frontend/.env**
+```
+VITE_API_URL=http://localhost:4000
+```
+
+## Gen AI usage
+
+The chatbot (`POST /api/chat`) calls the Anthropic Messages API
+(`claude-sonnet-4-6`). Each request:
+1. Pulls the current tournaments/matches (including live scores) from SQLite.
+2. Builds a system prompt containing that live data plus venue info.
+3. Sends the fan's question + system prompt to Claude and streams back a
+   grounded, up-to-date answer — so it never says something the schedule
+   already contradicts.
+
+See `backend/src/routes/chat.js`.
+
+**/node_modules/
+**/dist/
+**/data/
+**/.env
+*.log
+.DS_Store
